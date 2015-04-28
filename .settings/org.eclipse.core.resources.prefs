@@ -1,0 +1,8 @@
+eclipse.preferences.version=1
+encoding/DRNN_Predictor.py=utf-8
+encoding/DRNN_Trainer.py=utf-8
+encoding/built_word_dict.py=utf-8
+encoding/doc_to_binary_matrix.py=utf-8
+encoding/preprocessing_stanford.py=utf-8
+encoding/sentiment_classify_prepare.py=utf-8
+encoding/word2vec.py=utf-8

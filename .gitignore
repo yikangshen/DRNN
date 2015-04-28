@@ -45,11 +45,8 @@ Temporary Items
 # this project
 data
 params*
-*.project
-*.pydevproject
 *.pyc
 *.pkl
 *.npy
 *.txt
 stanford_word_vector
-.settings
