@@ -44,7 +44,7 @@ Temporary Items
 
 # this project
 data
-params
+params*
 *.project
 *.pydevproject
 *.pyc
