@@ -13,7 +13,7 @@ import time, os
 
 os.environ['MKL_NUM_THREADS'] = '1'
 
-from DRNN_mlp import DRNN
+from DRNN_kernel import DRNN
 
 max_length = 60
 
