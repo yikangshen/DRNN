@@ -174,8 +174,8 @@ class DRNN(object):
 	
 	def backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		self.dL = np.zeros([self.N_word, self.size], dtype=np.float32)
-		dWp, dWf, dbp = self._backprop(i, j, dp, dv, ind_matrix, p_matrix, v_matrix)
-		return dWp, dWf, dbp, self.dL
+		dWf, dWp, dbp = self._backprop(i, j, dp, dv, ind_matrix, p_matrix, v_matrix)
+		return dWf, dWp, dbp, self.dL
 		
 	def _backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		if i < j:
@@ -205,10 +205,10 @@ class DRNN(object):
 			dp1 = dp * p / p1
 			dp2 = dp * p / p2
 			
-			dWp1, dWf1, dbp1 = self._backprop(i, k, dp1, dv1p + dv1f, ind_matrix, p_matrix, v_matrix)
-			dWp2, dWf2, dbp2 = self._backprop(k+1, j, dp2, dv2p + dv2f, ind_matrix, p_matrix, v_matrix)
+			dWf1, dWp1, dbp1 = self._backprop(i, k, dp1, dv1p + dv1f, ind_matrix, p_matrix, v_matrix)
+			dWf2, dWp2, dbp2 = self._backprop(k+1, j, dp2, dv2p + dv2f, ind_matrix, p_matrix, v_matrix)
 			
-			return dWp + dWp1 + dWp2, dWf + dWf1 + dWf2, dbp + dbp1 + dbp2
+			return dWf + dWf1 + dWf2, dWp + dWp1 + dWp2, dbp + dbp1 + dbp2
 		elif i == j:
 			#dL = np.zeros([self.N_word, self.size], dtype=np.float32)
 			self.dL[ind_matrix[0,i]] += dv
@@ -231,26 +231,6 @@ class DRNN(object):
 				return i
 		else:
 			raise 'error i > j'
-		
-def pv(args):
-	n, model, sentence, random_row = args
-	index0, p0, v0 = model.pv_value(sentence)
-	index1, p1, v1 = model.pv_value(random_row)
-	pp0 = p0[sentence.shape[0]-1,0]
-	pp1 = p1[sentence.shape[0]-1,0]
-	if pp0 - pp1 > 0.1:
-		#cost = 0
-		gparams_value = [0, 0]
-	else:
-		dWp0, dWf0, dbp0, dL0 = model.backprop(0, sentence.shape[0]-1, -1.0, np.zeros(model.size, dtype=np.float32), index0, p0, v0)
-		dWp1, dWf1, dbp1, dL1 = model.backprop(0, sentence.shape[0]-1, 1.0, np.zeros(model.size, dtype=np.float32), index1, p1, v1)
-		gparams_value = [dWf0 + dWf1, dWp0 + dWp1, dbp0 + dbp1, dL0 + dL1]
-
-	#index_list = model.get_parse_tree(index0, 0, sentence.shape[0]-1)
-	#print n, 'p:', pp0, ',', pp1, 'p0-p1:', pp0 - pp1, 'p0/p2:', pp0 / pp1
-	#print index_list
-	
-	return (pp0 - pp1, gparams_value)
 				
 if __name__ == '__main__':
 	dictfile = open('word_dict_stanford.pkl', 'r')
@@ -258,7 +238,7 @@ if __name__ == '__main__':
 	dictfile.close()
 	nword = len(word_dict.keys())
 
-	length = 150
+	length = 60
 	rng = np.random.RandomState(1234)
 	model = DRNN(rng, L.shape[1], nword, L_values=L)
 	random_row0 = np.random.randint(0, nword, length)

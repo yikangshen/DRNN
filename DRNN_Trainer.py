@@ -13,7 +13,7 @@ import time, os
 
 os.environ['MKL_NUM_THREADS'] = '1'
 
-from DRNN_kernel import DRNN
+from DRNN_mlp import DRNN
 
 max_length = 60
 
@@ -38,16 +38,17 @@ def pv(args):
             gparams_value = [0, 0, 0, 0]
         else:
             if pp0 > 0:
-                dWp0, dWf0, dbp0, dL0 = model.backprop(0, sentence.shape[0]-1, -1.0 * (0.1 - (pp0 - pp1)), np.zeros(model.size, dtype=np.float32), index0, p0, v0)
+                dp0 = model.backprop(0, sentence.shape[0]-1, -1.0 * (0.1 - (pp0 - pp1)), np.zeros(model.size, dtype=np.float32), index0, p0, v0)
             else:
                 print n, sentence
                 continue
             if pp1 > 0:
-                dWp1, dWf1, dbp1, dL1 = model.backprop(0, sentence.shape[0]-1, 1.0 * (0.1 - (pp0 - pp1)), np.zeros(model.size, dtype=np.float32), index1, p1, v1)
+                dp1 = model.backprop(0, sentence.shape[0]-1, 1.0 * (0.1 - (pp0 - pp1)), np.zeros(model.size, dtype=np.float32), index1, p1, v1)
             else:
                 print n, sentence
                 continue
-            gparams_value = [dWf0 + dWf1, dWp0 + dWp1, dbp0 + dbp1, dL0 + dL1]
+            gparams_value = [d0 + d1 for d0,d1 in zip(dp0, dp1)]
+            #gparams_value = [dWf0 + dWf1, dWp0 + dWp1, dbp0 + dbp1, dL0 + dL1]
         for i in range(len(gps)):
             gps[i] = gps[i] + gparams_value[i]
       

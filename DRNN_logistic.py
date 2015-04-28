@@ -169,7 +169,7 @@ class DRNN(object):
 	def backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		self.dL = np.zeros([self.N_word, self.size], dtype=np.float32)
 		dWp, dWf = self._backprop(i, j, dp, dv, ind_matrix, p_matrix, v_matrix)
-		return dWp, dWf, self.dL
+		return dWf, dWp, self.dL
 		
 	def _backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		if i < j:
@@ -224,26 +224,6 @@ class DRNN(object):
 				return i
 		else:
 			raise 'error i > j'
-		
-def pv(args):
-	n, model, sentence, random_row = args
-	index0, p0, v0 = model.pv_value(sentence)
-	index1, p1, v1 = model.pv_value(random_row)
-	pp0 = p0[sentence.shape[0]-1,0]
-	pp1 = p1[sentence.shape[0]-1,0]
-	if pp0 - pp1 > 0.1:
-		#cost = 0
-		gparams_value = [0, 0]
-	else:
-		dWp0, dWf0, dL0 = model.backprop(0, sentence.shape[0]-1, -1.0, np.zeros(model.size, dtype=np.float32), index0, p0, v0)
-		dWp1, dWf1, dL1 = model.backprop(0, sentence.shape[0]-1, 1.0, np.zeros(model.size, dtype=np.float32), index1, p1, v1)
-		gparams_value = [dWf0 + dWf1, dWp0 + dWp1, dL0 + dL1]
-
-	#index_list = model.get_parse_tree(index0, 0, sentence.shape[0]-1)
-	#print n, 'p:', pp0, ',', pp1, 'p0-p1:', pp0 - pp1, 'p0/p2:', pp0 / pp1
-	#print index_list
-	
-	return (pp0 - pp1, gparams_value)
 				
 if __name__ == '__main__':
 	dictfile = open('word_dict_stanford.pkl', 'r')

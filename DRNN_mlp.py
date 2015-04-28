@@ -18,9 +18,10 @@ def sigmoid(x):
 	return 1 / (1 + np.exp(-x))
 
 class DRNN(object):
-	def __init__(self, rng, size, N_word, Wf_values=None, Wp_values=None, bp_value=None, L_values=None, activation = np.tanh):
+	def __init__(self, rng, size, N_word, Wf_values=None, Wp1_values=None, Wp2_values=None, L_values=None, activation = np.tanh):
 		self.size = size
 		self.N_word = N_word
+		self.hidden_size = 50
 		
 		#initial Wf, bf
 		if Wf_values is None:
@@ -38,20 +39,27 @@ class DRNN(object):
 		self.Wf = Wf_values
 		
 		#initial Wp, bp
-		if Wp_values is None:
-			Wp_values = np.asarray(
+		if Wp1_values is None:
+			Wp1_values = np.asarray(
 								rng.uniform(
 										low=-np.sqrt(6. / (size*2)),
 										high=np.sqrt(6. / (size*2)),
-										size=(size, size)
+										size=(self.hidden_size + 1,)
 										),
 								dtype=np.float32
 								)
-		self.Wp = Wp_values
+		self.Wp1 = Wp1_values
 		
-		if bp_value is None:
-			bp_value = 0.0
-		self.bp = bp_value
+		if Wp2_values is None:
+			Wp2_values = np.asarray(
+								rng.uniform(
+										low=-np.sqrt(6. / (size*2)),
+										high=np.sqrt(6. / (size*2)),
+										size=(self.hidden_size, 2*size + 1)
+										),
+								dtype=np.float32
+								)
+		self.Wp2 = Wp2_values
 		
 		if L_values is None:
 			L_values = np.asarray(
@@ -67,19 +75,21 @@ class DRNN(object):
 			
 		self.params = [
 					self.Wf,
-					self.Wp,
-					self.bp,
+					self.Wp1,
+					self.Wp2,
 					self.L #L should be the last one
 					]
 		
 		self.L1 = (
             abs(self.Wf).sum()
-            + abs(self.Wp).sum()
+            + abs(self.Wp1).sum()
+            + abs(self.Wp2).sum()
         )
 		
 		self.L2_sqr = (
             (self.Wf ** 2).sum()
-            + (self.Wp ** 2).sum()
+            + (self.Wp1 ** 2).sum()
+            + (self.Wp2 ** 2).sum()
         )
 		
 
@@ -87,8 +97,9 @@ class DRNN(object):
 		return np.tanh(np.dot(self.Wf, np.concatenate([v1, v2, [np.float32(1.0)]])))
 	
 	def g(self, v1, v2):
-		return sigmoid(np.dot(v1, np.dot(self.Wp, v2)) + self.bp)
-		#return sigmoid(np.dot(self.Wp, np.concatenate([v1, v2, [np.float32(1.0)]])))
+		h = sigmoid(np.dot(self.Wp2, np.concatenate([v1, v2, [np.float32(1.0)]])))
+		p = sigmoid(np.dot(self.Wp1, np.concatenate([h, [np.float32(1.0)]])))
+		return p
 	
 	def pv_value0(self, sentence):
 		l = sentence.shape[0]
@@ -174,8 +185,8 @@ class DRNN(object):
 	
 	def backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		self.dL = np.zeros([self.N_word, self.size], dtype=np.float32)
-		dWp, dWf, dbp = self._backprop(i, j, dp, dv, ind_matrix, p_matrix, v_matrix)
-		return dWp, dWf, dbp, self.dL
+		dWp1, dWp2, dWf = self._backprop(i, j, dp, dv, ind_matrix, p_matrix, v_matrix)
+		return dWf, dWp1, dWp2, self.dL
 		
 	def _backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		if i < j:
@@ -198,17 +209,19 @@ class DRNN(object):
 			b = p / p1 / p2
 			db = b * (1 - b)
 			temp = dp * p1 * p2 * db
-			dWp = np.outer(v1, v2) * temp
-			dv1p = np.dot(self.Wp, v2) * temp
-			dv2p = np.dot(v1, self.Wp) * temp
-			dbp = temp
+			h = np.dot(self.Wp2, vv)
+			dh = self.Wp1[0:self.hidden_size] * temp
+			dWp1 = temp * np.concatenate([h, [np.float32(1.0)]])
+			dWp2 = np.outer(dh, vv)
+			dv1p = np.dot(dh, self.Wp2[:, 0:self.size])
+			dv2p = np.dot(dh, self.Wp2[:, self.size:self.size*2])
 			dp1 = dp * p / p1
 			dp2 = dp * p / p2
 			
-			dWp1, dWf1, dbp1 = self._backprop(i, k, dp1, dv1p + dv1f, ind_matrix, p_matrix, v_matrix)
-			dWp2, dWf2, dbp2 = self._backprop(k+1, j, dp2, dv2p + dv2f, ind_matrix, p_matrix, v_matrix)
+			dWp11, dWp21, dWf1 = self._backprop(i, k, dp1, dv1p + dv1f, ind_matrix, p_matrix, v_matrix)
+			dWp12, dWp22, dWf2 = self._backprop(k+1, j, dp2, dv2p + dv2f, ind_matrix, p_matrix, v_matrix)
 			
-			return dWp + dWp1 + dWp2, dWf + dWf1 + dWf2, dbp + dbp1 + dbp2
+			return dWp1 + dWp11 + dWp12, dWp2 + dWp21 + dWp22, dWf + dWf1 + dWf2
 		elif i == j:
 			#dL = np.zeros([self.N_word, self.size], dtype=np.float32)
 			self.dL[ind_matrix[0,i]] += dv
@@ -231,26 +244,6 @@ class DRNN(object):
 				return i
 		else:
 			raise 'error i > j'
-		
-def pv(args):
-	n, model, sentence, random_row = args
-	index0, p0, v0 = model.pv_value(sentence)
-	index1, p1, v1 = model.pv_value(random_row)
-	pp0 = p0[sentence.shape[0]-1,0]
-	pp1 = p1[sentence.shape[0]-1,0]
-	if pp0 - pp1 > 0.1:
-		#cost = 0
-		gparams_value = [0, 0]
-	else:
-		dWp0, dWf0, dbp0, dL0 = model.backprop(0, sentence.shape[0]-1, -1.0, np.zeros(model.size, dtype=np.float32), index0, p0, v0)
-		dWp1, dWf1, dbp1, dL1 = model.backprop(0, sentence.shape[0]-1, 1.0, np.zeros(model.size, dtype=np.float32), index1, p1, v1)
-		gparams_value = [dWf0 + dWf1, dWp0 + dWp1, dbp0 + dbp1, dL0 + dL1]
-
-	#index_list = model.get_parse_tree(index0, 0, sentence.shape[0]-1)
-	#print n, 'p:', pp0, ',', pp1, 'p0-p1:', pp0 - pp1, 'p0/p2:', pp0 / pp1
-	#print index_list
-	
-	return (pp0 - pp1, gparams_value)
 				
 if __name__ == '__main__':
 	dictfile = open('word_dict_stanford.pkl', 'r')
@@ -258,7 +251,7 @@ if __name__ == '__main__':
 	dictfile.close()
 	nword = len(word_dict.keys())
 
-	length = 150
+	length = 60
 	rng = np.random.RandomState(1234)
 	model = DRNN(rng, L.shape[1], nword, L_values=L)
 	random_row0 = np.random.randint(0, nword, length)
@@ -305,7 +298,7 @@ if __name__ == '__main__':
 	time1 = time.clock()
 	print 'backprop...'
 	dL = np.zeros([nword, L.shape[1]], dtype=np.float32)
-	dWp1, dWf1, dbp1, dL1 = model.backprop(0, length-1, np.float32(1.0), np.zeros(model.size, dtype=np.float32), index, p, v)
+	dWp11, dWp21, dWf1, dL1 = model.backprop(0, length-1, np.float32(1.0), np.zeros(model.size, dtype=np.float32), index, p, v)
 	time2 = time.clock()
 	print 'backprop', time2 - time1
 	n = 0
