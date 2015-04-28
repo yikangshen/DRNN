@@ -11,9 +11,7 @@ import cPickle
 
 import time, os
 
-from DRNN import DRNN
-
-max_length = 60
+from DRNN_logistic import DRNN
 
 if __name__ == '__main__':
     dictfile = open('word_dict_stanford.pkl', 'r')
