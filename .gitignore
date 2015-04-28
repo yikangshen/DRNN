@@ -52,4 +52,4 @@ params
 *.npy
 *.txt
 stanford_word_vector
-.settings/org.eclipse.core.resources.prefs
+.settings
