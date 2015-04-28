@@ -23,7 +23,7 @@ if __name__ == '__main__':
     bmats = cPickle.load(bmatfile)
     bmatfile.close()
     
-    params_file = open('params/params_epoch_2_0.000758474195479.pkl','r')
+    params_file = open('params_epoch_4_0.00211399209386.pkl','r')
     params = cPickle.load(params_file)
     params_file.close()
     
