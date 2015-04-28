@@ -44,3 +44,10 @@ Temporary Items
 
 # this project
 data
+*.project
+*.pydevproject
+*.pyc
+*.pkl
+*.npy
+*.txt
+stanford_word_vector
