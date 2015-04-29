@@ -61,7 +61,7 @@ def pv(args):
     return (dpp/len(sentences), gps)
 
 def train_DRNN(nword, bmats, max_length, params=None, L = None,
-            margin = 0.1, learning_rate=0.1, 
+            margin = 0.1, learning_rate=0.01, 
             L1_reg=0.00, L2_reg=0.0001, 
             n_epochs=100, batch_size=200):
     rng = np.random.RandomState(1234)

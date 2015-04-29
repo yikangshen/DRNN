@@ -32,10 +32,14 @@ if __name__ == '__main__':
         
         col = []
         s = lines[0] + '\t'
-        for word in sentence:
+        for word in sentence[0:-1]:
             if word_dict.has_key(word):
                 col.append(word_dict[word])
                 s += word + ' '
+        if not(sentence[-1] in ['.', '?', '!']):
+            if word_dict.has_key(sentence[-1]):
+                col.append(word_dict[sentence[-1]])
+                s += sentence[-1] + ' '
         s += '\n'
         if len(col) < 2:
             continue
@@ -60,10 +64,14 @@ if __name__ == '__main__':
         
         col = []
         s = str(n) + '\t'
-        for word in sentence:
+        for word in sentence[0:-1]:
             if word_dict.has_key(word):
                 col.append(word_dict[word])
                 s += word + ' '
+        if not(sentence[-1] in ['.', '?', '!']):
+            if word_dict.has_key(sentence[-1]):
+                col.append(word_dict[sentence[-1]])
+                s += sentence[-1] + ' '
         s += '\n'
         if len(col) < 2:
             continue

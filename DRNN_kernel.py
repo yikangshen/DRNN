@@ -175,7 +175,7 @@ class DRNN(object):
 	def backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		self.dL = np.zeros([self.N_word, self.size], dtype=np.float32)
 		dWf, dWp, dbp = self._backprop(i, j, dp, dv, ind_matrix, p_matrix, v_matrix)
-		return dWf, dWp, dbp, self.dL
+		return dWf , dWp , dbp, self.dL
 		
 	def _backprop(self, i, j, dp, dv, ind_matrix, p_matrix, v_matrix):
 		if i < j:

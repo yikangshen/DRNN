@@ -11,7 +11,7 @@ import cPickle
 
 import time, os
 
-from DRNN_logistic import DRNN
+from DRNN_kernel import DRNN
 
 if __name__ == '__main__':
     dictfile = open('word_dict_stanford.pkl', 'r')
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     bmats = cPickle.load(bmatfile)
     bmatfile.close()
     
-    params_file = open('params_epoch_4_0.00211399209386.pkl','r')
+    params_file = open('params_epoch_4_0.000482708899764.pkl','r')
     params = cPickle.load(params_file)
     params_file.close()
     
@@ -40,15 +40,15 @@ if __name__ == '__main__':
     sentence_file.close()
     
     rng = np.random.RandomState(1234)
-    model = DRNN(rng, L.shape[1], nword, Wf_values=params[0], Wp_values=params[1], L_values=params[2])
+    model = DRNN(rng, L.shape[1], nword, Wf_values=params[0], Wp_values=params[1], bp_value=params[2], L_values=params[3])
     
     n = 0
     print L.shape[0]
     for i in range(L.shape[0]):
-        if np.abs(L[i] - params[2][i]).any() > 0:
+        if np.abs(L[i] - params[-1][i]).any() > 0:
             n += 1
     print n
-    print params[2].max(), params[2].min()
+    print params[-1].max(), params[-1].min()
     
     output = open('parse_tree.txt', 'w')
     vecs = []
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     for sentence in bmats:
         n += 1
         index0, p0, v0 = model.pv_value(sentence)
-        #vecs.append(v0[sentence.shape[0]-1, 0])
+        vecs.append(v0[sentence.shape[0]-1, 0])
         if p0[sentence.shape[0]-1, 0] == 0:
             print n, sentence
         try:
