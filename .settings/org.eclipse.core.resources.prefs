@@ -1,4 +1,7 @@
 eclipse.preferences.version=1
+encoding//CNN/CNN_Trainer.py=utf-8
+encoding//CNN/doc_to_binary_matrix.py=utf-8
+encoding//CNN/word2vec.py=utf-8
 encoding/DRNN_Predictor.py=utf-8
 encoding/DRNN_Trainer.py=utf-8
 encoding/built_word_dict.py=utf-8

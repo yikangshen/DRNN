@@ -11,6 +11,8 @@ import cPickle
 import time
 import sys, os
 
+import gensim.models.word2vec as word2vec
+
 os.environ['MKL_NUM_THREADS'] = '1'
 
 def sigmoid(x):
@@ -21,7 +23,7 @@ def softmax(x):
 	sumex = ex.sum()
 	return ex/sumex
 
-class DRNN(object):
+class CNN(object):
 	def __init__(self, rng, size, N_word, conv_l=5, n_feature_maps=50, maxk=20, hsize=100, output_size=2, Wc_values=None, Wh_values=None, Ws_values=None, L_values=None, activation = np.tanh):
 		self.size = size
 		self.N_word = N_word
@@ -81,7 +83,8 @@ class DRNN(object):
 			
 		self.params = [
 					self.Wc,
-					self.Wh
+					self.Wh,
+					self.Ws
 					]
 		
 		self.L1 = (
@@ -121,7 +124,10 @@ class DRNN(object):
 	def SoftmaxRegression(self, h_out):
 		return softmax(np.dot(self.Ws, np.concatenate([h_out, [1.0]])))
 	
-	def caculate(self, mat):
+	def caculate(self, row):
+		mat = np.zeros((len(row), self.L.shape[1]))
+		for i in range(len(row)):
+			mat[i] = self.L[row[i]]
 		conv_out = self.conv(mat)
 		pooling_out, pooling_out_index = self.k_max_pooling(conv_out)
 		h_out = self.hidden(pooling_out)
@@ -163,7 +169,10 @@ class DRNN(object):
 		
 		return dWc
 	
-	def backprop(self, mat, out):
+	def backprop(self, row, out):
+		mat = np.zeros((len(row), self.L.shape[1]))
+		for i in range(len(row)):
+			mat[i] = self.L[row[i]]
 		conv_out = self.conv(mat)
 		pooling_out, pooling_out_index = self.k_max_pooling(conv_out)
 		h_out = self.hidden(pooling_out)
@@ -177,25 +186,22 @@ class DRNN(object):
 		dconv_out = self.bp_kmax(dkmax, pooling_out_index)
 		dWc = self.bp_conv(dconv_out, mat)
 		
-		return dWs, dWh, dWc
+		return dWc, dWh, dWs
 				
 if __name__ == '__main__':
-	dictfile = open('word_dict_stanford.pkl', 'r')
-	word_dict, L = cPickle.load(dictfile)
-	dictfile.close()
-	nword = len(word_dict.keys())
-
+	model = word2vec.Word2Vec.load('stanford_word_vector')
+	nword = len(model.vocab.keys())
+	L = model.syn0
+	
 	length = 60
 	rng = np.random.RandomState(1234)
-	model = DRNN(rng, L.shape[1], nword, L_values=L)
+	model = CNN(rng, L.shape[1], nword, L_values=L)
 	random_row0 = np.random.randint(0, nword, length)
-	random_mat0 = np.zeros((length, L.shape[1]))
-	for i in range(length):
-		random_mat0[i] = L[random_row0[i]]
+	
 
 	print 'start caculate'
 	start_time = time.clock()
-	v = model.caculate(random_mat0)
+	v = model.caculate(random_row0)
 	end_time = time.clock()
 	#print index
 	print v
@@ -203,11 +209,11 @@ if __name__ == '__main__':
 	
 	start_time = time.clock()
 	for i in range(1):
-		dWs, dWh, dWc = model.backprop(random_mat0, 1)
+		dWs, dWh, dWc = model.backprop(random_row0, 1)
 		model.Ws += dWs * 0.001
 		model.Wh += dWh * 0.001
 		model.Wc += dWc * 0.001
-		print model.caculate(random_mat0)
+		print model.caculate(random_row0)
 	end_time = time.clock()
 	print end_time - start_time
 	
