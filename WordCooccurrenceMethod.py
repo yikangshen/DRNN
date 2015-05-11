@@ -7,6 +7,12 @@ Created on 2015.5.8
 import gensim.models.word2vec as word2vec
 import numpy as np
 
+def word_cooccurrence(model, w1, w2):
+    p1 = 1.0 / (1.0 + np.exp(-np.dot(model.syn0[model.vocab[w1].index], model.syn1neg[model.vocab[w2].index].T)))
+    p2 = 1.0 / (1.0 + np.exp(-np.dot(model.syn0[model.vocab[w2].index], model.syn1neg[model.vocab[w1].index].T)))
+    
+    return (p1 + p2) / 2
+
 def cooccurrence(wl1, wl2, co_matrix):
     max_p = 0.0
     sum_p = 0.0
@@ -15,8 +21,8 @@ def cooccurrence(wl1, wl2, co_matrix):
         for w2 in wl2:
             if co_matrix[w1,w2] > max_p:
                 max_p = co_matrix[w1,w2]
-                sum_p += co_matrix[w1,w2]
-                n += 1
+            sum_p += co_matrix[w1,w2]
+            n += 1
     return sum_p / n
 
 def parser(co_matrix):
@@ -92,7 +98,7 @@ if __name__ == '__main__':
         co_matrix = np.zeros([l, l])
         for i in range(l):
             for j in range(l):
-                co_matrix[i,j] = model.cooccurrence(sentence[i], sentence[j])
+                co_matrix[i,j] = word_cooccurrence(model, sentence[i], sentence[j])
         ind_matrix, p_matrix = parser(co_matrix)
         output.write(str(get_parse_tree(ind_matrix, 0, l-1, sentence)) + '\n')
     output.close()
