@@ -102,7 +102,7 @@ class CNN(object):
 		conv_out = np.zeros([self.n_fmaps, mat.shape[0]-self.conv_l+1])
 		for i in range(self.n_fmaps):
 			conv_out[i] = convolve2d(mat, self.Wc[i], mode='valid').flatten()
-		return conv_out
+		return np.tanh(conv_out)
 	
 	def k_max_pooling(self, conv_out):
 		pooling_out = np.zeros([self.n_fmaps, self.maxk])
@@ -119,7 +119,7 @@ class CNN(object):
 		return pooling_out.flatten(), pooling_out_index
 	
 	def hidden(self, pooling_out):
-		return sigmoid(np.dot(self.Wh, np.concatenate([pooling_out, [1.0]])))
+		return np.tanh(np.dot(self.Wh, np.concatenate([pooling_out, [1.0]])))
 	
 	def SoftmaxRegression(self, h_out):
 		return softmax(np.dot(self.Ws, np.concatenate([h_out, [1.0]])))
@@ -142,7 +142,7 @@ class CNN(object):
 		return dh, dw
 		
 	def bp_hidden(self, dout, p, h):
-		dout = dout * h * (1-h) 
+		dout = dout * (1-h**2)
 		dw = np.outer(dout, np.concatenate([p, [1.0]]))
 		dkmax = np.dot(dout, self.Wh[:, 0:self.maxk * self.n_fmaps])
 		
@@ -160,8 +160,9 @@ class CNN(object):
 					
 		return dconv_out
 		
-	def bp_conv(self, dout, mat):
+	def bp_conv(self, dout, mat, conv_out):
 		dWc = np.zeros_like(self.Wc)
+		dout = dout * (1-conv_out**2)
 		for i in range(dout.shape[0]):
 			for j in range(dout.shape[1]):
 				if dout[i,j] != 0:
@@ -184,7 +185,7 @@ class CNN(object):
 		dh, dWs = self.bp_SoftmaxRegression(dl, h_out)
 		dkmax, dWh = self.bp_hidden(dh, pooling_out, h_out)
 		dconv_out = self.bp_kmax(dkmax, pooling_out_index)
-		dWc = self.bp_conv(dconv_out, mat)
+		dWc = self.bp_conv(dconv_out, mat, conv_out)
 		
 		return dWc, dWh, dWs
 				
@@ -209,7 +210,7 @@ if __name__ == '__main__':
 	
 	start_time = time.clock()
 	for i in range(1):
-		dWs, dWh, dWc = model.backprop(random_row0, 1)
+		dWc, dWh, dWs = model.backprop(random_row0, 1)
 		model.Ws += dWs * 0.001
 		model.Wh += dWh * 0.001
 		model.Wc += dWc * 0.001

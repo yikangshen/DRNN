@@ -23,6 +23,22 @@ from multiprocessing import Pool, cpu_count
 
 import gensim.models.word2vec as word2vec
 
+def evaluate(args):
+    model, sentences = args
+    dpp = 0.0
+    for n, x, y in sentences:
+        predict = model.caculate(x)
+        cross_entropy = -(y * np.log(predict[1]) + (1-y) * np.log(predict[0]))
+        if predict[y] > 0.5:
+            p = 1.0
+        else:
+            p = 0.0
+        dpp += p
+      
+        print n, p
+       
+    return dpp/len(sentences)
+
 def pv(args):
     model, sentences = args
     gps = []
@@ -32,18 +48,22 @@ def pv(args):
     for n, x, y in sentences:
         predict = model.caculate(x)
         cross_entropy = -(y * np.log(predict[1]) + (1-y) * np.log(predict[0]))
-        dpp += cross_entropy
+        if predict[y] > 0.5:
+            p = 1.0
+        else:
+            p = 0.0
+        dpp += p
         
         gparams_value = model.backprop(x, y)
         for i in range(len(gps)):
             gps[i] = gps[i] + gparams_value[i]
       
-        print n, cross_entropy
+        print n, predict, p
        
     return (dpp/len(sentences), gps)
 
-def train_DRNN(nword, train_x, train_y, max_length, params=None, L = None,
-            margin = 0.1, learning_rate=0.01, 
+def train_DRNN(nword, train_x, train_y, test_x, test_y, max_length, params=None, L = None,
+            margin = 0.1, learning_rate=0.001, 
             L1_reg=0.00, L2_reg=0.0001, 
             n_epochs=100, batch_size=200):
     rng = np.random.RandomState(1234)
@@ -60,6 +80,7 @@ def train_DRNN(nword, train_x, train_y, max_length, params=None, L = None,
     start_time = time.clock()
 
     n_train_batches = len(train_x) / batch_size
+    n_test_batches = len(test_x) / batch_size
     n_per_process = batch_size / cpu_count()
     
     pool = Pool()
@@ -123,7 +144,7 @@ if __name__ == '__main__':
     L = model.syn0
     
     bmatfile = open('doc_binary_matrix_stanford.pkl', 'r')
-    train_x, train_y = cPickle.load(bmatfile)
+    (train_x, train_y), (test_x, test_y) = cPickle.load(bmatfile)
     bmatfile.close()
     
     '''
@@ -131,4 +152,4 @@ if __name__ == '__main__':
     params = cPickle.load(params_file)
     params_file.close()
     '''
-    train_DRNN(nword, train_x, train_y, max_length, L=L.astype(np.float32))
+    train_DRNN(nword, train_x, train_y, test_x, test_y, max_length, L=L.astype(np.float32))
