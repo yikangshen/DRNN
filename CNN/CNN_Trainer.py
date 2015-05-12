@@ -35,7 +35,7 @@ def evaluate(args):
             p = 0.0
         dpp += p
       
-        print n, p
+        print n, predict, p, cross_entropy
        
     return dpp/len(sentences)
 
@@ -62,14 +62,51 @@ def pv(args):
        
     return (dpp/len(sentences), gps)
 
-def train_DRNN(nword, train_x, train_y, test_x, test_y, max_length, params=None, L = None,
-            margin = 0.1, learning_rate=0.001, 
-            L1_reg=0.00, L2_reg=0.0001, 
-            n_epochs=100, batch_size=200):
+def predict(params, L, test_x, test_y, batch_size = 1000):
+    rng = np.random.RandomState(1234)
+    model = CNN(rng, L.shape[1], nword, Wc_values=params[0], Wh_values=params[1], Ws_values=params[2], L_values=L)
+    
+    n_train_batches = len(train_x) / batch_size
+    n_per_process = batch_size / cpu_count()
+    
+    pool = Pool()
+    
+    differencelist = []
+    n = 0
+    for minibatch_index in xrange(n_train_batches):
+        process_task = []
+        count = 0
+        for i in range(minibatch_index * batch_size, (minibatch_index + 1) * batch_size):
+            n += 1
+            
+            if count == 0:
+                sentences = []
+                
+            l = train_x[i].shape[0]
+            if l < 2:
+                continue
+            sentences.append((n, test_x[i], test_y[i]))
+            count += 1
+            
+            if count > n_per_process:
+                process_task.append((model, sentences))
+                count = 0
+        process_task.append((model, sentences))
+                
+        results = pool.map(evaluate, process_task)
+        for dpp in results:          
+            differencelist.append(dpp)
+    
+    print np.mean(differencelist)
+    
+
+def train_DRNN(nword, train_x, train_y, test_x, test_y, max_length, 
+               params=None, L = None, margin = 0.1, learning_rate=0.01, 
+               L1_reg=0.00, L2_reg=0.0001, n_epochs=100, batch_size=500):
     rng = np.random.RandomState(1234)
         
     if params != None:
-        model = CNN(rng, params[2].shape[1], nword, Wf_values=params[0], Wp_values=params[1], L_values=params[2])
+        model = CNN(rng, L.shape[1], nword, Wc_values=params[0], Wh_values=params[1], Ws_values=params[2], L_values=L)
     elif L != None:
         model = CNN(rng, L.shape[1], nword, L_values=L)
     else:
@@ -80,7 +117,6 @@ def train_DRNN(nword, train_x, train_y, test_x, test_y, max_length, params=None,
     start_time = time.clock()
 
     n_train_batches = len(train_x) / batch_size
-    n_test_batches = len(test_x) / batch_size
     n_per_process = batch_size / cpu_count()
     
     pool = Pool()
@@ -147,9 +183,12 @@ if __name__ == '__main__':
     (train_x, train_y), (test_x, test_y) = cPickle.load(bmatfile)
     bmatfile.close()
     
-    '''
-    params_file = open('params_epoch_6_0.00160522288763.pkl','r')
+    print train_x[0], train_y[0]
+    
+    params_file = open('params_epoch_18_0.653410628019.pkl','r')
     params = cPickle.load(params_file)
     params_file.close()
-    '''
+    
     train_DRNN(nword, train_x, train_y, test_x, test_y, max_length, L=L.astype(np.float32))
+    
+    #predict(params, L, test_x, test_y)
