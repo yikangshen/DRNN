@@ -167,7 +167,7 @@ class CNN(object):
 			for j in range(dout.shape[1]):
 				if dout[i,j] != 0:
 					dWc[i] += mat[j:j+self.conv_l,:] * dout[i,j]
-			dWc[i] = dWc[i] / dout.shape[1]
+			#dWc[i] = dWc[i] / dout.shape[1]
 		
 		return dWc
 	
